@@ -1,14 +1,15 @@
 ﻿using System.CommandLine;
+using System.Text;
 
 
 var bundleCommand = new Command("bundle", "Bundle code files to single file");
 
-var outputBundleOption = new Option<FileInfo>(new[]{"--output","-o"}, "Output file path and name");
-var noteBundleOption = new Option<bool>(new[]{"--note","-n"}, "Write source file path as note");
-var sortBundleOption = new Option<string>(new[]{"--sort","-s"}, ()=>"name", "Sort by name or extension (ext)");
+var outputBundleOption = new Option<FileInfo>(new[]{"--output","-o"}, "File path and name for the bundled output");
+var noteBundleOption = new Option<bool>(new[]{"--note","-n"}, "Include the source file path as a comment");
+var sortBundleOption = new Option<string>(new[]{"--sort","-s"}, ()=>"name", "Sort files by name (default) or extension");
 var removeBundleOption = new Option<bool>(new[]{"--remove-empty-lines","--rml","-r"}, "Remove empty lines");
-var authorBundleOption = new Option<string>(new[]{"--author","-a"}, "Write author name in head");
-var languageBundleOption = new Option<string[]>(new[]{"--language","--lang","-l"}, ()=>["all"], "List [] of programming languages to include. Use 'all' to include all files")
+var authorBundleOption = new Option<string>(new[]{"--author","-a"}, "Add the author's name as a header comment");
+var languageBundleOption = new Option<string[]>(new[]{"--language","--lang","-l"}, ()=>["all"], "Specify programming languages to include. Use 'all' to include all files (default)")
 {
     AllowMultipleArgumentsPerToken = true,
 };
@@ -81,7 +82,81 @@ bundleCommand.SetHandler((output,note,sort,removeEmptyLines,author,languages) =>
     }
 },outputBundleOption, noteBundleOption, sortBundleOption, removeBundleOption, authorBundleOption, languageBundleOption);
 
+
+
+var createRspCommand = new Command("create-rsp","Create response file for bundle command");
+
+createRspCommand.SetHandler(() =>
+{
+    string output = "";
+    while (string.IsNullOrEmpty(output))
+    {
+        Console.WriteLine("Enter output file path:");
+        output = Console.ReadLine();
+    }
+
+    string note = "";
+    while (note!="n" && note!="y")
+    {
+        Console.WriteLine("Write files names? press y, else n or enter to skip");
+        note = Console.ReadLine();
+        if (string.IsNullOrEmpty(note))
+        {
+            note = "n";
+            break;
+        }
+    }
+
+    string sort = "";
+    while (sort!="ext" && sort!="extension" && sort!="name")
+    {
+        Console.WriteLine("Sort by: extension/ext or name. press enter to default(name)");
+        sort = Console.ReadLine();
+        if (string.IsNullOrEmpty(sort))
+        {
+            sort = "name";
+            break;
+        }
+    }
+
+    string author = "";
+    Console.WriteLine("Enter author name if you want. else skip");
+    author = Console.ReadLine();
+
+
+    string remove = "";
+    while (remove!="n" && remove!="y")
+    {
+        Console.WriteLine("Remove empty lines? press y, else n or skip");
+        remove = Console.ReadLine();
+        if (string.IsNullOrEmpty(remove))
+        {
+            remove = "n";
+            break;
+        }
+    }
+
+    Console.WriteLine("Write list of programming languages to include, separate by spaces.\n Write 'all' or skip to include all files");
+    string languages = Console.ReadLine();
+    if (string.IsNullOrEmpty(languages))
+        languages = "all";
+
+    string command = $"bundle --output \"{output}\"" +
+                     (note == "y" ? " --note" : "") +
+                     $" --sort {sort}" +
+                     (!string.IsNullOrEmpty(author) ? $" --author \"{author}\"" : "") +
+                     (remove == "y" ? " --remove-empty-lines" : "") +
+                     $" --language {languages}";
+
+    File.WriteAllText("bundle.rsp", command, Encoding.UTF8);
+    Console.WriteLine($"Response file created successfully");
+    Console.WriteLine($"Run the command using:  @bundle.rsp");
+});
+
+
+
 var rootCommand = new RootCommand("Root Command for File Bundler CLI");
 rootCommand.AddCommand(bundleCommand);
+rootCommand.AddCommand(createRspCommand);
 
 rootCommand.InvokeAsync(args);
