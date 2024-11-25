@@ -29,7 +29,7 @@ bundleCommand.SetHandler((output,note,sort,removeEmptyLines,author,languages) =>
         Console.WriteLine("Error: The output file must be located outside of the current directory");
         return;
     }
-    if (outputPath.ToLower().Contains("bin") || outputPath.ToLower().Contains("debug"))
+    if (currentDirectory.ToLower().Contains("bin") || currentDirectory.ToLower().Contains("debug"))
     {
         Console.WriteLine("Error: Can't bundle files from bin/debug folders");
         return;
