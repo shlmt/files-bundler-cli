@@ -30,11 +30,6 @@ bundleCommand.SetHandler((output,note,sort,removeEmptyLines,author,languages) =>
         Console.WriteLine("Error: The output file must be located outside of the current directory");
         return;
     }
-    if (currentDirectory.ToLower().Contains("bin") || currentDirectory.ToLower().Contains("debug"))
-    {
-        Console.WriteLine("Error: Can't bundle files from bin/debug folders");
-        return;
-    }
 
     if (sort!="name" && sort!="ext" && sort!="extension")
     {
@@ -46,19 +41,30 @@ bundleCommand.SetHandler((output,note,sort,removeEmptyLines,author,languages) =>
     {
         using (StreamWriter writer = new StreamWriter(output.FullName, false))
         {
-            if (author!=null) writer.WriteLine("// Author: "+author);
-            string[] files = Directory.GetFiles(".");
-            files = sort switch
+            string[] files = Directory.GetFiles(".", "*", SearchOption.AllDirectories);
+
+            string[] excludedDirs = { "bin", "debug", "object", "node_modules" };
+            files = files.Where(file =>
             {
-                "name" => files.OrderBy(f => Path.GetFileName(f)).ToArray(),
-                _ => files.OrderBy(f => Path.GetExtension(f)).ToArray()
-            };
+                var directory = Path.GetDirectoryName(file);
+                return directory != null && !excludedDirs.Any(dir => directory.Contains(dir, StringComparison.OrdinalIgnoreCase));
+            }).ToArray();
+
             if (!languages.Contains("all", StringComparer.OrdinalIgnoreCase))
             {
                 var normalizedLanguages = languages.Select(lang => lang.Trim().ToLower()).ToArray();
                 var extensions = normalizedLanguages.Select(lang => $".{lang}");
                 files = files.Where(file => extensions.Contains(Path.GetExtension(file).ToLower())).ToArray();
             }
+
+            files = sort switch
+            {
+                "name" => files.OrderBy(f => Path.GetFileName(f)).ToArray(),
+                _ => files.OrderBy(f => Path.GetExtension(f)).ToArray()
+            };
+
+            if (author != null) writer.WriteLine("// Author: " + author);
+
             foreach (string file in files)
             {
                 if(note) writer.WriteLine("// "+file);
